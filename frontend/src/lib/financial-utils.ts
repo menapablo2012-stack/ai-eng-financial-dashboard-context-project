@@ -4,8 +4,13 @@ import {
   type MonthlyDataPoint,
 } from "./financial-types";
 
-function toYearMonthKey(value: Date): string {
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
+function toYearMonthKey(dateString: string): string {
+  // Parse ISO date string directly (YYYY-MM-DD) without timezone conversion
+  // This avoids bugs where new Date("2024-02-01") gets interpreted as UTC,
+  // then converted to local time, potentially shifting the month in Western timezones.
+  // See: .agents/rules/architecture.md - "Agrupación mensual y zonas horarias"
+  const [year, month] = dateString.split("-");
+  return `${year}-${month}`;
 }
 
 function formatMonthYearLabel(yearMonthKey: string): string {
@@ -39,7 +44,7 @@ export function computeMonthlyData(
   const monthlyMap: Record<string, { income: number; outcome: number }> = {};
 
   for (const m of movements) {
-    const yearMonthKey = toYearMonthKey(new Date(m.create_date));
+    const yearMonthKey = toYearMonthKey(m.create_date);
     if (!monthlyMap[yearMonthKey]) {
       monthlyMap[yearMonthKey] = { income: 0, outcome: 0 };
     }

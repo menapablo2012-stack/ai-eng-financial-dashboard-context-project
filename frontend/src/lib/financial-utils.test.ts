@@ -101,6 +101,67 @@ describe("computeMonthlyData", () => {
       profitPercent: 100,
     });
   });
+
+  it("handles month boundary dates correctly (timezone-safe)", () => {
+    const boundaryMovements: FinancialMovement[] = [
+      {
+        create_date: "2024-01-31",
+        amount: 500,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2B",
+      },
+      {
+        create_date: "2024-02-01",
+        amount: 300,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2B",
+      },
+      {
+        create_date: "2024-02-29",
+        amount: 200,
+        operation_type: "outcome",
+        category: "suppliers",
+        business_type: "B2B",
+      },
+      {
+        create_date: "2024-03-01",
+        amount: 100,
+        operation_type: "outcome",
+        category: "operational",
+        business_type: "B2B",
+      },
+    ];
+
+    const monthlyData = computeMonthlyData(boundaryMovements);
+
+    expect(monthlyData).toHaveLength(3);
+    expect(monthlyData[0].month).toBe("Jan 2024");
+    expect(monthlyData[0].income).toBe(500);
+    expect(monthlyData[1].month).toBe("Feb 2024");
+    expect(monthlyData[1].income).toBe(300);
+    expect(monthlyData[1].outcome).toBe(200);
+    expect(monthlyData[2].month).toBe("Mar 2024");
+    expect(monthlyData[2].outcome).toBe(100);
+  });
+
+  it("preserves ISO date format without timezone conversion", () => {
+    const movements: FinancialMovement[] = [
+      {
+        create_date: "2024-01-15",
+        amount: 1000,
+        operation_type: "income",
+        category: "sales",
+        business_type: "B2B",
+      },
+    ];
+
+    const monthlyData = computeMonthlyData(movements);
+
+    expect(monthlyData).toHaveLength(1);
+    expect(monthlyData[0].month).toBe("Jan 2024");
+  });
 });
 
 describe("formatters", () => {

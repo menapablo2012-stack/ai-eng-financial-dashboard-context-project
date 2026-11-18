@@ -251,8 +251,13 @@ def get_metrics(
     end_date: date | None = Query(default=None),
     category: Category | None = Query(default=None),
     operation_type: OperationType | None = Query(default=None),
+    business_type: BusinessType | None = Query(default=None),
 ) -> list[FinancialMovement]:
     movements = generate_mock_movements(seed=42)
+    if business_type is not None:
+        movements = [
+            item for item in movements if item.business_type == business_type
+        ]
     filtered = filter_movements(
         movements, start_date, end_date, category, operation_type
     )
@@ -358,34 +363,6 @@ def get_metrics_alerts(
     summary = summarize_movements(filtered, group_by)
     return detect_outcome_alerts(summary, threshold)
 
+# DEPRECADO: Usar GET /api/metrics?business_type=B2B en su lugar
+# (mantener ruta por compatibilidad hacia atrás pero no documentar)
 
-@router.get("/api/metrics/b2b", response_model=list[FinancialMovement])
-def get_b2b_metrics(
-    start_date: date | None = Query(default=None),
-    end_date: date | None = Query(default=None),
-    category: Category | None = Query(default=None),
-    operation_type: OperationType | None = Query(default=None),
-) -> list[FinancialMovement]:
-    movements = [
-        movement for movement in generate_mock_movements(seed=42) if movement.business_type == "B2B"
-    ]
-    filtered = filter_movements(
-        movements, start_date, end_date, category, operation_type
-    )
-    return ensure_chronological_order(filtered)
-
-
-@router.get("/api/metrics/b2c", response_model=list[FinancialMovement])
-def get_b2c_metrics(
-    start_date: date | None = Query(default=None),
-    end_date: date | None = Query(default=None),
-    category: Category | None = Query(default=None),
-    operation_type: OperationType | None = Query(default=None),
-) -> list[FinancialMovement]:
-    movements = [
-        movement for movement in generate_mock_movements(seed=42) if movement.business_type == "B2C"
-    ]
-    filtered = filter_movements(
-        movements, start_date, end_date, category, operation_type
-    )
-    return ensure_chronological_order(filtered)

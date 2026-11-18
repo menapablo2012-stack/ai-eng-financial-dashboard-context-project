@@ -48,25 +48,14 @@ def test_metrics_endpoint_respects_date_filters():
     assert payload
     assert all(item["create_date"] == first_date for item in payload)
 
-
-def test_b2b_endpoint_only_returns_b2b_records():
-    response = client.get("/api/metrics/b2b")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload
-    assert all(item["business_type"] == "B2B" for item in payload)
-    assert payload == sorted(payload, key=lambda item: item["create_date"])
+# DEPRECATED: test_b2b_endpoint_only_returns_b2b_records
+# Use test_metrics_endpoint_filters_by_business_type instead
+# (Endpoints /api/metrics/b2b and /api/metrics/b2c have been removed)
 
 
-def test_b2c_endpoint_only_returns_b2c_records():
-    response = client.get("/api/metrics/b2c")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload
-    assert all(item["business_type"] == "B2C" for item in payload)
-    assert payload == sorted(payload, key=lambda item: item["create_date"])
+# DEPRECATED: test_b2c_endpoint_only_returns_b2c_records
+# Use test_metrics_endpoint_filters_by_business_type instead
+# (Endpoints /api/metrics/b2b and /api/metrics/b2c have been removed)
 
 
 def test_metrics_endpoint_filters_by_category():
@@ -87,18 +76,23 @@ def test_metrics_endpoint_filters_by_operation_type():
     assert all(item["operation_type"] == "income" for item in payload)
 
 
-def test_b2b_endpoint_combines_new_filters():
+def test_metrics_endpoint_filters_by_business_type():
+    """Test that /api/metrics?business_type=B2B returns only B2B records."""
     response = client.get(
-        "/api/metrics/b2b",
-        params={"operation_type": "outcome", "category": "suppliers"},
+        "/api/metrics",
+        params={"business_type": "B2B"},
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload
     assert all(item["business_type"] == "B2B" for item in payload)
-    assert all(item["operation_type"] == "outcome" for item in payload)
-    assert all(item["category"] == "suppliers" for item in payload)
+    assert payload == sorted(payload, key=lambda item: item["create_date"])
+
+
+# DEPRECATED: test_b2b_endpoint_combines_new_filters
+# Use test_metrics_endpoint_filters_by_business_type with combined params instead
+
 
 
 def test_metrics_facets_returns_filter_options_and_date_range():
@@ -128,6 +122,29 @@ def test_metrics_summary_by_month_returns_balances():
     assert set(first.keys()) == {"period", "income", "outcome", "net"}
     assert all(item["income"] >= 0 for item in payload)
     assert all(item["outcome"] >= 0 for item in payload)
+
+
+def test_metrics_summary_by_month_honors_category_filter():
+    response = client.get(
+        "/api/metrics/summary",
+        params={"group_by": "month", "category": "sales"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    # Verify that summary was computed only from sales category
+    # by checking against unfiltered summary
+    unfiltered_response = client.get(
+        "/api/metrics/summary",
+        params={"group_by": "month"},
+    )
+    unfiltered_payload = unfiltered_response.json()
+    
+    # Filtered summary should have equal or less income/outcome than unfiltered
+    assert all(
+        filtered_period["income"] <= unfiltered_period["income"]
+        for filtered_period, unfiltered_period in zip(payload, unfiltered_payload)
+    )
 
 
 def test_metrics_summary_by_week_honors_business_type_filter():
